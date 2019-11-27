@@ -1,0 +1,14 @@
+-- @atl2010 
+-- @path Java=/org.eclipse.gmt.modisco.java/model/java.ecore
+module RefactoringInnerClass;
+
+create OUT: Java refining IN: Java;
+
+rule RenameMethods {
+	from
+		m1: Java!MethodDeclaration
+	to
+		m2: Java!MethodDeclaration(
+			name <- 'will_' + m1.name
+		)
+}
