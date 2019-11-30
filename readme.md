@@ -101,7 +101,7 @@ Abra o arquivo ATL adicionado e insira as seguintes informações:
 
 <img src="./images/ATLFile.png" alt="ATL file updated" style="zoom:67%;" />
 
-_Figura 6 - Arquivo ATL_
+_Figura 7 - Arquivo ATL_
 
 
 
@@ -113,7 +113,7 @@ Afim de terminar a preparação do ambiente, faz-se necessária a configuração
 
 ![Run configuration](./images/SetMetamodelUsedOnTrasformation.png)
 
-_Figura 7 - Configurando execução do projeto ATL (1)_
+_Figura 8 - Configurando execução do projeto ATL (1)_
 
 
 
@@ -125,13 +125,13 @@ Para finalizar a configuração, é necessário inserir o XMI a ser transformado
 
 <img src="./images/SetSourceModelIN.png" alt="Run configuration" style="zoom:67%;" />
 
-_Figura 8 - Configurando execução do projeto ATL (2)_
+_Figura 9 - Configurando execução do projeto ATL (2)_
 
 ​        Target Models > OUT: > Selecione o local onde será gerado o arquivo resultante da transformação > Dê um nome para o arquivo resultante, sendo que o final **necessariamente deve ser** _java.xmi (sufixo utilizado pelo MoDisco para reconhecer e gerar novamente o código resultante da transformação).
 
 <img src="./images/SetTargetModel.png" alt="Run configuration" style="zoom:67%;" />
 
-_Figura 9 - Configurando execução do projeto ATL (3)_
+_Figura 10 - Configurando execução do projeto ATL (3)_
 
 Após os passos descritos acima, o projeto já não apresentará erros, porém ainda não faz nenhuma transformação, uma vez que não há nenhuma tarefa no arquivo ATL para realizar tal tarefa, assim sendo nos resta adicionar as funções para realizar de fato o refactoring do código.
 
@@ -217,3 +217,89 @@ rule CreateGetter{
 }
 ```
 
+
+
+## Regerar código Java após a aplicação do refactoring
+
+Afim de facilitar o processo de gerência de dependências, foi utilizado o Gradle para a geração do projeto responsável por gerar o código Java novamente.
+
+_**OBS.:** Caso você não tenha o Gradle instalado em seu Eclipse, é possível fazer a instalação do mesmo através do gerenciador de plugins do Eclipse._
+
+​	File > New > Other > Gradle Project > Clique em _Next_ > Novamente clique em _Next_ > Dê um nome ao seu
+​	projeto > clique em _Finish_
+
+![Create gradle project](./images/createGradleProject.png)
+
+_Figura 11 - Criando projeto Gradle_
+
+
+
+O projeto Gradle já será criado com a dependência do projeto _Guava_ fornecido pelo Google, porém caso não haja tal dependência explícita em seu projeto, apenas adicione-a.
+
+Seu arquivo de dependências deverá ser parecido com o demostrado na Figura 12.
+
+<img src="./images/buildGradle.png" alt="build.gradle" style="zoom:67%;" />
+
+Figura 12 - Arquivo de dependências build.gradle
+
+ 
+
+Assim como foi feito no projeto ATL, é necessário adicionar os plugins do MoDisco ao projeto que estamos criando agora para recriar o código Java. Os plugins a serem adicionados são:
+
+* org.eclipse.gmt.modisco.java.generation
+
+* org.eclipse.modisco.util.emf.core 
+
+_**OBS.:** O passo-a-passo sobre como importar plugins a um projeto no eclipse pode ser visto na Figura 6, por isso não está explícito aqui novamente._
+
+Após adicionar todas as dependências, vamos implementar a classe Java responsável por gerar o código após o refactoring ser aplicado. A classe deve seguir o modelo apresentado a seguir.
+
+```java
+package com.william.mo631.generator;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.xmi.XMIResource;
+import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
+import org.eclipse.emf.ecore.xmi.impl.XMIResourceImpl;
+import org.eclipse.gmt.modisco.java.emf.JavaPackage;
+import org.eclipse.gmt.modisco.java.generation.files.GenerateJavaExtended;
+
+public class Generation {
+
+	public static void main(String[] args) throws IOException {
+		EPackage.Registry.INSTANCE.put(JavaPackage.eNS_URI, JavaPackage.eINSTANCE);
+
+		XMIResourceFactoryImpl xmiResourceFactoryImpl = new XMIResourceFactoryImpl() {
+			public Resource createResource(URI uri) {
+				XMIResource xmiResource = new XMIResourceImpl();
+				return xmiResource;
+			}
+		};
+
+		Resource.Factory.Registry.INSTANCE.getExtensionToFactoryMap().put("xmi", xmiResourceFactoryImpl);
+
+		GenerateJavaExtended javaGenerator = new GenerateJavaExtended(
+            //refactoringTest_java.xmi is the file after the refactoring be applied
+				URI.createFileURI("src/main/resources/refactoringTest_java.xmi"),
+                new File("src/main/generated/"),
+				new ArrayList<Object>());
+
+		javaGenerator.doGenerate(null);
+	}
+}
+```
+
+
+
+### Pontos de atenção
+
+Aqui são retratados os principais problemas passados para conclusão do projeto (com relação ao ambiente)
+
+* Versão do MoDisco - para ser apto a gerar o código fonte Java novamente, é realmente necessário utilizar a versão 2019-09 do Eclipse e instalar os plugins presentes nos links no início desse documento.
+* Atualizado do arquivo ATL - Algumas vezes ao atualizar o arquivo ATL o mesmo não atualizava o arquivo ASM, para corrigir isso foi necessário reimportar o plugin java do MoDisco e reconfigurar o processo de execução.
