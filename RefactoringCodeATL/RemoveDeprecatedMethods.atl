@@ -1,0 +1,15 @@
+-- @atlcompiler atl2010
+-- @path Java=/org.eclipse.gmt.modisco.java/model/java.ecore
+
+
+module Refactoring;
+create OUT: Java refining IN: Java;
+
+rule RemoveDeprecatedMethod {
+	from
+		method: Java!MethodDeclaration (
+			method.annotations->exists(annotation | annotation.type.type.name='Deprecated')
+		)
+	to
+		drop
+}
