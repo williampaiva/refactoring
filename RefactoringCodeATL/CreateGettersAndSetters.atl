@@ -24,6 +24,7 @@ rule CreateGetter{
 			not field.hasGetter()	
 		)
 	to
+		-- Change member visibility - public to private
 		updatedField: Java!FieldDeclaration(
 			modifier <- fieldModifier
 		),
@@ -31,41 +32,42 @@ rule CreateGetter{
 			visibility <- #private	
 		),
 		
+		-- Generate getter
 		getter : Java!MethodDeclaration (
 			abstractTypeDeclaration <- field.abstractTypeDeclaration,
 			originalCompilationUnit <- field.originalCompilationUnit,
 			name <- 'get' + field.fragments->first().name.firstToUpper(),
-			modifier <- modifier,
-			body <- block,
-			returnType <- returnType
+			modifier <- getterModifier,
+			returnType <- getterReturnType,
+			body <- getterBlock
 		),
-		modifier : Java!Modifier (
+		getterModifier : Java!Modifier (
 			visibility <- #public	
 		),
-		returnType : Java!TypeAccess (
+		getterReturnType : Java!TypeAccess (
 			type <- if not field.type.oclIsUndefined() then
 						field.type.type
 					else
 						OclUndefined
 					endif
 		),
-		block : Java!Block (
+		getterBlock : Java!Block (
 			originalCompilationUnit <- field.originalCompilationUnit,
-			statements <- Sequence{returnStatement}
+			statements <- Sequence{getterBlockReturnStatement}
 		),
-		returnStatement : Java!ReturnStatement (
+		getterBlockReturnStatement : Java!ReturnStatement (
 			originalCompilationUnit <- field.originalCompilationUnit,
-			expression <- returnExpression
+			expression <- getReturnExpression
 		),
-		returnExpression : Java!FieldAccess (
+		getReturnExpression : Java!FieldAccess (
 			originalCompilationUnit <- field.originalCompilationUnit,
-			field <- stringVariableAccess,
-			expression <- expression
+			field <- getStringVariableAccess,
+			expression <- getExpression
 		),
-		stringVariableAccess : Java!SingleVariableAccess (
+		getStringVariableAccess : Java!SingleVariableAccess (
 			variable <- field.fragments->first()	
 		),
-		expression : Java!ThisExpression (
+		getExpression : Java!ThisExpression (
 			originalCompilationUnit <- field.originalCompilationUnit
 		)
 }
