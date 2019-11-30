@@ -20,8 +20,8 @@ helper context String def: firstToUpper() : String =
 
 rule CreateGetter{
 	from
-		field : Java!FieldDeclaration(
-			not field.hasGetter()	
+		sourceField : Java!FieldDeclaration(
+			not sourceField.hasGetter()	
 		)
 	to
 		-- Change member visibility - public to private
@@ -34,9 +34,9 @@ rule CreateGetter{
 		
 		-- Generate getter
 		getter : Java!MethodDeclaration (
-			abstractTypeDeclaration <- field.abstractTypeDeclaration,
-			originalCompilationUnit <- field.originalCompilationUnit,
-			name <- 'get' + field.fragments->first().name.firstToUpper(),
+			abstractTypeDeclaration <- sourceField.abstractTypeDeclaration,
+			originalCompilationUnit <- sourceField.originalCompilationUnit,
+			name <- 'get' + sourceField.fragments->first().name.firstToUpper(),
 			modifier <- getterModifier,
 			returnType <- getterReturnType,
 			body <- getterBlock
@@ -45,29 +45,74 @@ rule CreateGetter{
 			visibility <- #public	
 		),
 		getterReturnType : Java!TypeAccess (
-			type <- if not field.type.oclIsUndefined() then
-						field.type.type
+			type <- if not sourceField.type.oclIsUndefined() then
+						sourceField.type.type
 					else
 						OclUndefined
 					endif
 		),
 		getterBlock : Java!Block (
-			originalCompilationUnit <- field.originalCompilationUnit,
+			originalCompilationUnit <- sourceField.originalCompilationUnit,
 			statements <- Sequence{getterBlockReturnStatement}
 		),
 		getterBlockReturnStatement : Java!ReturnStatement (
-			originalCompilationUnit <- field.originalCompilationUnit,
+			originalCompilationUnit <- sourceField.originalCompilationUnit,
 			expression <- getReturnExpression
 		),
 		getReturnExpression : Java!FieldAccess (
-			originalCompilationUnit <- field.originalCompilationUnit,
+			originalCompilationUnit <- sourceField.originalCompilationUnit,
 			field <- getStringVariableAccess,
 			expression <- getExpression
 		),
 		getStringVariableAccess : Java!SingleVariableAccess (
-			variable <- field.fragments->first()	
+			variable <- sourceField.fragments->first()	
 		),
 		getExpression : Java!ThisExpression (
-			originalCompilationUnit <- field.originalCompilationUnit
+			originalCompilationUnit <- sourceField.originalCompilationUnit
+		),
+		
+		--generate setter
+		setter : Java!MethodDeclaration (
+			abstractTypeDeclaration <- sourceField.abstractTypeDeclaration,
+			originalCompilationUnit <- sourceField.originalCompilationUnit,
+			name <- 'set' + sourceField.fragments->first().name.firstToUpper(),
+			modifier <- setterModifier,
+			body <- setterBlock,
+			parameters <- setterParameter
+		),
+		setterModifier : Java!Modifier (
+			visibility <- #public	
+		),
+		setterBlock : Java!Block (
+			originalCompilationUnit <- sourceField.originalCompilationUnit,
+			statements <- Sequence{setterBlockExpressionStatement}
+		),
+		setterBlockExpressionStatement : Java!ExpressionStatement (
+			originalCompilationUnit <- sourceField.originalCompilationUnit,
+			expression <- setAssigmentExpression
+		),
+		setAssigmentExpression : Java!Assignment (
+			originalCompilationUnit <- sourceField.originalCompilationUnit,
+			leftHandSide <- setLeftHandSide,
+			rightHandSide <- setRightHandSide
+		),
+		setLeftHandSide : Java!FieldAccess(
+			originalCompilationUnit <- sourceField.originalCompilationUnit,
+			field <- setFieldLeftHandSide,
+			expression <- setExpression
+		),
+		setFieldLeftHandSide : Java!SingleVariableAccess(
+			variable <- sourceField.fragments->first()
+		),
+		setExpression : Java!ThisExpression (
+			originalCompilationUnit <- sourceField.originalCompilationUnit
+		),
+		setRightHandSide: Java!SingleVariableAccess (
+			variable <- sourceField.fragments->first()	
+		),
+		setterParameter : Java!SingleVariableDeclaration (
+			originalCompilationUnit <- sourceField.originalCompilationUnit,
+			type <- sourceField.type,
+			name <- sourceField.fragments->first().name
 		)
 }
