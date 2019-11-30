@@ -45,29 +45,22 @@ helper context Java!MethodDeclaration def: isNotMemberOfProjectPackage(): Boolea
 		self.proxy
 	endif;
 
---rule RemoveMainMethod {
---	from
---		m1: Java!MethodDeclaration (
---			m1.isMainMethod()
---		)
---	to
---		drop
---}
-
 
 rule RemoveInnerMethod {
 	from 
-		m1: Java!MethodDeclaration (
---			 not m1.isMainMethod() and
---			 not m1.isNotMemberOfProjectPackage() and
---			 not m1.hasMoreThanOneStatement() and
-			 m1.isReturnStatement()
+		inputMethod: Java!MethodDeclaration (
+			 not inputMethod.isMainMethod() and
+			 not inputMethod.isNotMemberOfProjectPackage() and
+			 not inputMethod.hasMoreThanOneStatement() and
+			 inputMethod.isReturnStatement()
 		)
 	to
-		m2: Java!MethodDeclaration(
-			name <- 'will_' + m1.name
-		)
---		m2: Java!MethodDeclaration(
---			body <- m1.body.statements->first()
---		)
+		outputMethod: Java!MethodDeclaration(
+			name <- 'will_' + inputMethod.name
+--			body <- updatedBody
+--		),
+--		updatedBody : Java!Block(
+--			originalCompilationUnit <- inputMethod.originalCompilationUnit,
+--			statements <- inputMethod.body.statements->selectByType(Java!ReturnStatement)->first().expression->selectByType(Java!MethodInvocation).method.statements
+		)		
 }
