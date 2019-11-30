@@ -1,14 +1,73 @@
--- @atl2010 
+-- @atlcompiler atl2010
 -- @path Java=/org.eclipse.gmt.modisco.java/model/java.ecore
-module RefactoringInnerClass;
 
+
+module Refactoring;
 create OUT: Java refining IN: Java;
 
-rule RenameMethods {
-	from
-		m1: Java!MethodDeclaration
+helper context Java!MethodDeclaration def: isMainMethod(): Boolean =
+	if self.name = 'main' then
+		true
+	else
+		false
+	endif;
+
+helper context Java!MethodDeclaration def: hasMoreThanOneStatement(): Boolean =
+	if(self.body.oclIsUndefined()) then
+		false
+	else 
+		if(self.body.statements.oclIsUndefined()) then
+			false
+		else
+			if (self.body.statements -> size() > 1) then
+				true
+			else
+				false
+			endif
+		endif
+	endif;
+
+helper context Java!MethodDeclaration def: isReturnStatement(): Boolean =
+	if (not self.oclIsUndefined() and 
+		not	self.body.oclIsUndefined() and
+		not self.body.statements.oclIsUndefined() and
+		not self.body.statements->first().oclIsUndefined() and 
+		self.body.statements->first().oclIsTypeOf(Java!ReturnStatement)) then
+		true
+	else
+		false
+	endif;
+
+helper context Java!MethodDeclaration def: isNotMemberOfProjectPackage(): Boolean =
+	if (self.proxy.oclIsUndefined()) then
+		false
+	else 
+		self.proxy
+	endif;
+
+--rule RemoveMainMethod {
+--	from
+--		m1: Java!MethodDeclaration (
+--			m1.isMainMethod()
+--		)
+--	to
+--		drop
+--}
+
+
+rule RemoveInnerMethod {
+	from 
+		m1: Java!MethodDeclaration (
+--			 not m1.isMainMethod() and
+--			 not m1.isNotMemberOfProjectPackage() and
+--			 not m1.hasMoreThanOneStatement() and
+			 m1.isReturnStatement()
+		)
 	to
 		m2: Java!MethodDeclaration(
 			name <- 'will_' + m1.name
 		)
+--		m2: Java!MethodDeclaration(
+--			body <- m1.body.statements->first()
+--		)
 }
