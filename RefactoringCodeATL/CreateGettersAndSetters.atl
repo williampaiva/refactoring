@@ -1,0 +1,71 @@
+-- @atlcompiler atl2010
+-- @path Java=/org.eclipse.gmt.modisco.java/model/java.ecore
+
+
+module Refactoring;
+create OUT: Java refining IN: Java;
+
+helper context Java!FieldDeclaration def: hasGetter() : Boolean = 
+	self.abstractTypeDeclaration.bodyDeclarations
+	->select(d | d.oclIsTypeOf(Java!MethodDeclaration))
+	->select(md | md.name.startsWith(
+		let fieldName : String = self.fragments->first().name 
+		in
+			'get' + fieldName.substring(1,1).toUpper() + fieldName.substring(2,fieldName.size())
+		))
+	->notEmpty();
+
+helper context String def: firstToUpper() : String =
+	self.substring(1, 1).toUpper() + self.substring(2, self.size());
+
+rule CreateGetter{
+	from
+		field : Java!FieldDeclaration(
+			not field.hasGetter()	
+		)
+	to
+		updatedField: Java!FieldDeclaration(
+			modifier <- fieldModifier
+		),
+		fieldModifier : Java!Modifier (
+			visibility <- #private	
+		),
+		
+		getter : Java!MethodDeclaration (
+			abstractTypeDeclaration <- field.abstractTypeDeclaration,
+			originalCompilationUnit <- field.originalCompilationUnit,
+			name <- 'get' + field.fragments->first().name.firstToUpper(),
+			modifier <- modifier,
+			body <- block,
+			returnType <- returnType
+		),
+		modifier : Java!Modifier (
+			visibility <- #public	
+		),
+		returnType : Java!TypeAccess (
+			type <- if not field.type.oclIsUndefined() then
+						field.type.type
+					else
+						OclUndefined
+					endif
+		),
+		block : Java!Block (
+			originalCompilationUnit <- field.originalCompilationUnit,
+			statements <- Sequence{returnStatement}
+		),
+		returnStatement : Java!ReturnStatement (
+			originalCompilationUnit <- field.originalCompilationUnit,
+			expression <- returnExpression
+		),
+		returnExpression : Java!FieldAccess (
+			originalCompilationUnit <- field.originalCompilationUnit,
+			field <- stringVariableAccess,
+			expression <- expression
+		),
+		stringVariableAccess : Java!SingleVariableAccess (
+			variable <- field.fragments->first()	
+		),
+		expression : Java!ThisExpression (
+			originalCompilationUnit <- field.originalCompilationUnit
+		)
+}
